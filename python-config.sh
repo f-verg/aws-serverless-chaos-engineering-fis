@@ -30,6 +30,6 @@ sudo ./aws/install
 cd ~/environment/aws-serverless-chaos-engineering-fis/
 
 # Install external dependencies
-python3.9 -m pip install wheel
+python3.9 -m pip install wheel  # Needed to build 3rd party libraries into the Lambda function
 
 clear
