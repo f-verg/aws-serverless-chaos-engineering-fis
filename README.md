@@ -4,9 +4,12 @@ Clone the workshop code in the local environment:
 git clone https://github.com/f-verg/aws-serverless-chaos-engineering-fis.git
 ```
 
-Navigate in the 
+Navigate in the root folder:
+```bash
+cd ~/environment/aws-serverless-chaos-engineering-fis
+```
 
-Install Cloud9 required dependencies:
+Install Cloud9 required dependencies and expand EBS volume for Cloud9:
   
 ```bash  
 . ./python-config.sh
@@ -14,7 +17,6 @@ Install Cloud9 required dependencies:
 
 Build the SAM template:
 ```bash
-cd ~/environment/aws-serverless-chaos-engineering-fis
 sam build
 ```
 
