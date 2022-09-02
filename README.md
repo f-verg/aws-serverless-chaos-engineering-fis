@@ -4,6 +4,8 @@ Clone the workshop code in the local environment:
 git clone https://github.com/f-verg/aws-serverless-chaos-engineering-fis.git
 ```
 
+Navigate in the 
+
 Install Cloud9 required dependencies:
   
 ```bash  
@@ -18,7 +20,7 @@ sam build
 
 Deploy the SAM template in your account: 
 ```bash
-sam deploy --guided Requires --capabilities CAPABILITY_NAMED_IAM
+sam deploy --guided --capabilities CAPABILITY_NAMED_IAM --stack-name aws-sce-fis
 ```
 
 
