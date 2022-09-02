@@ -18,7 +18,7 @@ sam build
 
 Deploy the SAM template in your account: 
 ```bash
-sam deploy --guided
+sam deploy --guided Requires --capabilities CAPABILITY_NAMED_IAM
 ```
 
 

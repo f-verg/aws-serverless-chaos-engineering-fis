@@ -7,12 +7,16 @@ Description: >
 
 Globals:
   Function:
-    Timeout: 3
+    Timeout: 30
 
 Resources:
-  ChaosLambdaFunction:
+  # -----------------------------------------------------------------------------------------------------------------------------------------------
+  # Lambda functions
+  # -----------------------------------------------------------------------------------------------------------------------------------------------
+  SCEChaosLambda:
     Type: AWS::Serverless::Function 
     Properties:
+      FunctionName: SCEChaosLambda
       CodeUri: chaos_lambda/
       Handler: app.handler
       Runtime: python3.9
@@ -20,7 +24,7 @@ Resources:
         - x86_64
       Environment:
         Variables:
-          CHAOS_PARAM: !Ref ServerlessFaultParameter
+          CHAOS_PARAM: !Ref SCEChaosParameter
       Events:
         HelloWorld:
           Type: Api 
@@ -40,25 +44,127 @@ Resources:
             - ssm:GetParameters
             - ssm:GetParameter
             Resource: '*'
+  
+  # -----------------------------------------------------------------------------------------------------------------------------------------------
+  # SSM Parameters
+  # -----------------------------------------------------------------------------------------------------------------------------------------------
 
-  # SSM Parameter used by chaos-lambda to control failures
-  ServerlessFaultParameter:
+  SCEChaosParameter:
     Type: AWS::SSM::Parameter
     Properties:
-      Name: 'ChaosLambdaParameter'
+      Name: 'SCEChaosParameter'
       Description: 'Parameter controlling failures in chaos-lambda'
       Type: String
-      # https://aws-lambda-chaos-injection.readthedocs.io/en/latest/
-      # fault-type: one of: latency, status_code, exception
-      Value: '{"is_enabled":false,"fault_type":"latency","delay":400,"error_code":404,"exception_msg":"Fault injected by chaos-lambda","rate":1}'
+      Value: '{"is_enabled":false,"fault_type":"latency","delay":400,"error_code":404,"exception_msg":"Fault injected by chaos-lambda","rate":1}' # Default value (Disabled)
+  
+  # -----------------------------------------------------------------------------------------------------------------------------------------------
+  # CloudWatch Logs
+  # -----------------------------------------------------------------------------------------------------------------------------------------------
 
+  SCEFISLogGroup:
+    Type: AWS::Logs::LogGroup
+    Properties: 
+      LogGroupName: /fis/logs/
+
+  # -----------------------------------------------------------------------------------------------------------------------------------------------
+  # IAM Roles
+  # -----------------------------------------------------------------------------------------------------------------------------------------------
+  SCELambdaSSMRole:
+    Type: 'AWS::IAM::Role'
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service:
+                - ssm.amazonaws.com
+            Action:
+              - 'sts:AssumeRole'
+      Policies:
+        - PolicyName: root
+          PolicyDocument:
+            Version: '2012-10-17'
+            Statement:
+            - Sid: EnablePutParameterDocument
+              Effect: Allow
+              Action:
+              - ssm:PutParameter
+              Resource: "*"
+
+  SCESSMServiceRole:
+    Type: 'AWS::IAM::Role'
+    Properties:
+      RoleName: SCESSMServiceRole
+      AssumeRolePolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service:
+                - fis.amazonaws.com
+            Action:
+              - 'sts:AssumeRole'
+      Policies:
+        - PolicyName: root
+          PolicyDocument:
+            Version: '2012-10-17'
+            Statement:
+            - Sid: EnableSSMAutomationExecution
+              Effect: Allow
+              Action:
+              - ssm:GetAutomationExecution
+              - ssm:StartAutomationExecution
+              - ssm:StopAutomationExecution
+              Resource: "*"
+            - Sid: AllowFisToPassListedRolesToSsm
+              Effect: Allow
+              Action:
+              - iam:PassRole
+              Resource: !GetAtt SCELambdaSSMRole.Arn
+            - Sid: AllowFISExperimentLoggingActionsCloudwatch
+              Effect: Allow
+              Action:
+              - logs:CreateLogDelivery
+              - logs:PutResourcePolicy
+              - logs:DescribeResourcePolicies
+              - logs:DescribeLogGroups
+              Resource: "*"
+            - Sid: AllowFISExperimentRoleReadOnly
+              Effect: Allow
+              Action:
+              - iam:ListRoles
+              - ssm:ListCommands
+              Resource: "*"
+            - Sid: AllowFISExperimentRoleFISActions
+              Effect: Allow
+              Action:
+              - fis:InjectApiInternalError
+              - fis:InjectApiThrottleError
+              - fis:InjectApiUnavailableError
+              Resource: arn:*:fis:*:*:experiment/*
+            - Sid: AllowFISExperimentRoleSSMSendCommand
+              Effect: Allow
+              Action:
+              - ssm:SendCommand
+              Resource:
+              - arn:aws:ssm:*:*:document/*
+            - Sid: AllowFISExperimentRoleSSMCancelCommand
+              Effect: Allow
+              Action:
+              - ssm:CancelCommand
+              Resource: "*"
 Outputs:
   ChaosLambdaApi:
     Description: "API Gateway endpoint URL for Prod stage for Chaos Lambda function"
     Value: !Sub "https://${ServerlessRestApi}.execute-api.${AWS::Region}.amazonaws.com/Prod/hello/"
-  ChaosLambdaFunction:
+  SCEChaosLambda:
     Description: "Hello World Lambda Function ARN"
-    Value: !GetAtt ChaosLambdaFunction.Arn
-  ChaosLambdaFunctionRole:
+    Value: !GetAtt SCEChaosLambda.Arn
+  SCEChaosLambdaRole:
     Description: "Implicit IAM Role created for Chaos Lambda function"
-    Value: !GetAtt ChaosLambdaFunctionRole.Arn
+    Value: !GetAtt SCEChaosLambdaRole.Arn
+  SCEFISLogGroup:
+    Description: "FIS Log Group ARN"
+    Value: !GetAtt SCEFISLogGroup.Arn
+
