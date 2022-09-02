@@ -18,12 +18,28 @@ Resources:
       Runtime: python3.9
       Architectures:
         - x86_64
+      Environment:
+        Variables:
+          CHAOS_PARAM: !Ref ServerlessFaultParameter
       Events:
         HelloWorld:
           Type: Api 
           Properties:
             Path: /hello
             Method: get
+      Policies:
+        - Statement:
+          - Sid: SSMDescribeParametersPolicy
+            Effect: Allow
+            Action:
+            - ssm:DescribeParameters
+            Resource: '*'
+          - Sid: SSMGetParameterPolicy
+            Effect: Allow
+            Action:
+            - ssm:GetParameters
+            - ssm:GetParameter
+            Resource: '*'
 
   # SSM Parameter used by chaos-lambda to control failures
   ServerlessFaultParameter:
